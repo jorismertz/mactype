@@ -1,6 +1,6 @@
 # MacType
 
-MacType is a utility that brings the MacOS-style keyboard shortcuts for typing special characters, like ë, é, ä, and more, to X11 Linux environments. Designed for users accustomed to MacOS's typing shortcuts, MacTypeX seamlessly integrates this functionality into Linux, enhancing productivity and typing fluency for cross-platform users.
+MacType is a utility that brings the MacOS-style keyboard shortcuts for typing special characters, like ë, é, ä, and more, to X11 Linux environments. Designed for users accustomed to MacOS's typing shortcuts, MacType seamlessly integrates this functionality into Linux, enhancing productivity and typing fluency for cross-platform users.
 
 ## Features
 
@@ -11,8 +11,8 @@ MacType is a utility that brings the MacOS-style keyboard shortcuts for typing s
 
 ### Prerequisites
 
-    Linux operating system with X11
-    Rust and Cargo (for building from source)
+- Linux operating system with X11
+- Rust and Cargo (for building from source)
 
 ## Building from Source
 
@@ -28,19 +28,22 @@ cd mactype
 ```sh
 cargo build --release
 
-The executable will be located in ./target/release/. You can move it to a convenient location:
 ```
+The executable will be located in ./target/release/. You can move it to a convenient location:
 
 ```sh
 cp ./target/release/mactype ~/bin/ # or any other directory in your PATH
 ```
 
-### Ussage
+### Usage
 
 You can start using mactype by simple running the executable. For convience you could add this to your window managers startup script.
 
 ```sh
-./target/debug/mactype &
+/target/release/mactype &
+
+# Or if you placed it somewhere in your path:
+mactype &
 ```
 
 ## Special Character Shortcuts
@@ -68,7 +71,6 @@ When typing uppercase letters append a shift after the leader, for example: `Alt
   - `Alt + I` then `A`: â (Â for uppercase)
   - `Alt + U` then `A`: ä (Ä for uppercase)
   - `Alt + N` then `A`: ã (Ã for uppercase)
-  - `Alt` then `A`: å (Å for uppercase)
 
 - **I**
 
@@ -84,9 +86,3 @@ When typing uppercase letters append a shift after the leader, for example: `Alt
   - `Alt + I` then `O`: ô (Ô for uppercase)
   - `Alt + U` then `O`: ö (Ö for uppercase)
   - `Alt + N` then `O`: õ (Õ for uppercase)
-  - `Alt` then `O`: ø (Ø for uppercase)
-
-- **Miscellaneous**
-  - `Alt` then `C`: ç (Ç for uppercase)
-  - `Alt + N` then `N`: ñ (Ñ for uppercase)
-  <!-- - `Alt` then `S`: ß (Note: ß does not traditionally have an uppercase variant, though ẞ exists) -->

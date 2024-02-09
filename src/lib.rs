@@ -1,4 +1,4 @@
-use rdev::{listen, Event, EventType, Key};
+use rdev::Key;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -292,7 +292,7 @@ impl Combinations {
                 case = Case::Upper;
             }
 
-            return same_key && same_leader;
+            same_key && same_leader
         });
 
         if let Some(shortcut) = result {

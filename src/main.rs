@@ -1,5 +1,5 @@
 use enigo::{Enigo, KeyboardControllable};
-use mactype::{Combinations, Leader, Shortcut};
+use mactype::{Combinations, Leader};
 use rdev::{listen, Event, EventType, Key};
 
 #[derive(Debug, Clone)]
@@ -48,7 +48,6 @@ fn handle_keypress(state: &mut State) {
 
         if let Some((shortcut, case)) = result {
             let char = shortcut.char_from_case(case);
-            dbg!(char);
             type_char(char, state, true);
         }
     }
@@ -77,10 +76,7 @@ fn callback(event: Event, state: &mut State) {
                 state.keystrokes.push(key);
             }
 
-            // dbg!(&state.keystrokes);
             handle_keypress(state);
-
-            dbg!(&state);
         }
         EventType::KeyRelease(key) => {
             if let Some(index) = state.keystroke_index(key) {
