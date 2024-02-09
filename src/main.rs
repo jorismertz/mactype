@@ -6,6 +6,7 @@ use rdev::{listen, Event, EventType, Key};
 struct State {
     leader: Option<Leader>,
     keystrokes: Vec<Key>,
+    block_for: usize,
 }
 
 impl State {
@@ -22,6 +23,7 @@ fn main() {
     let mut state = State {
         leader: None,
         keystrokes: Vec::new(),
+        block_for: 0,
     };
 
     if let Err(error) = listen(move |event| callback(event, &mut state)) {
@@ -47,16 +49,15 @@ fn handle_keypress(state: &mut State) {
         if let Some((shortcut, case)) = result {
             let char = shortcut.char_from_case(case);
             dbg!(char);
-            type_char(char, true);
+            type_char(char, state, true);
         }
     }
 
     if let Some(leader) = leader {
-        // This is causing some breakage, rdev will catch the key sent with enigo.
-        // Might be able to work around this by setting a blocking_for variable in the state
-        // that way we can just ignore the string being sent in. maybe?
+        // Is seems enigo isn't able to type these niche characters.
+        // might have to find a different library to handle this
+        // type_char(leader.diacritic_char(), state, false);
 
-        // type_char(leader.diacritic_char(), false);
         state.leader = Some(leader);
     }
 }
@@ -64,6 +65,14 @@ fn handle_keypress(state: &mut State) {
 fn callback(event: Event, state: &mut State) {
     match event.event_type {
         EventType::KeyPress(key) => {
+            // Keypresses are simulated with a different library than we use for getting events
+            // Because of this they will be caught by this function and can mess up some logic.
+            // Incrementing this variable before sending off a keypress remedies this behaviouir
+            if state.block_for > 0 {
+                state.block_for -= 1;
+                return;
+            }
+
             if !state.has_keystroke(key) {
                 state.keystrokes.push(key);
             }
@@ -82,11 +91,15 @@ fn callback(event: Event, state: &mut State) {
     }
 }
 
-fn type_char(char: &str, replace: bool) {
+fn type_char(char: &str, state: &mut State, replace: bool) {
     let mut enigo = Enigo::new();
     if replace {
+        // Only keyup has to be accounted for since keydown doesn't have any
+        // meaningfull logic tied to it
+        state.block_for += 1;
         enigo.key_down(enigo::Key::Backspace);
         enigo.key_up(enigo::Key::Backspace);
     }
+    state.block_for += 1;
     enigo.key_sequence(char);
 }
