@@ -1,27 +1,59 @@
+use rdev::{listen, Event, EventType, Key};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use rdev::Key;
-
-pub struct PressedKeys {
-    history_length: usize,
-    keys: Vec<rdev::Key>,
-}
-
 #[derive(Debug)]
-pub struct Combination {
-    leader: Vec<Key>,
-    key: Key,
-    lowercase_char: &'static str,
-    uppercase_char: &'static str,
+pub enum Case {
+    Lower,
+    Upper,
 }
 
-impl Combination {
-    pub fn get_char(&self, case: Case) -> &str {
-        if let Case::Lower = case {
-            return self.lowercase_char;
+#[derive(Debug, EnumIter, PartialEq, Clone)]
+pub enum Leader {
+    AltE,
+    AltU,
+    AltI,
+    AltN,
+    AltBackquote,
+}
+
+impl Leader {
+    pub fn diacritic_char(&self) -> &str {
+        match self {
+            Leader::AltE => "´",         // Acute Accent
+            Leader::AltU => " ̈",         // Combining Diaeresis
+            Leader::AltI => " ̂",         // Combining Circumflex Accent
+            Leader::AltBackquote => "`", // Grave Accent
+            Leader::AltN => "~",         // This is the best i could do :(
         }
-        self.uppercase_char
+    }
+
+    pub fn from_keystrokes(keystrokes: &Vec<Key>) -> Option<Leader> {
+        match keystrokes.as_slice() {
+            [Key::Alt, Key::KeyE] => Some(Leader::AltE),
+            [Key::Alt, Key::KeyU] => Some(Leader::AltU),
+            [Key::Alt, Key::KeyI] => Some(Leader::AltI),
+            [Key::Alt, Key::KeyN] => Some(Leader::AltN),
+            [Key::Alt, Key::BackQuote] => Some(Leader::AltBackquote),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Shortcut {
+    lowercase: &'static str,
+    uppercase: &'static str,
+    leader: Leader,
+    key: Key,
+}
+
+impl Shortcut {
+    pub fn char_from_case(&self, case: Case) -> &str {
+        match case {
+            Case::Lower => self.lowercase,
+            Case::Upper => self.uppercase,
+        }
     }
 }
 
@@ -40,7 +72,7 @@ pub enum Combinations {
     CircumflexA,
     UmlautA,
     TildeA,
-    RingA,
+    // RingA,
     AcuteAccentI,
     GraveAccentI,
     CircumflexI,
@@ -50,270 +82,223 @@ pub enum Combinations {
     CircumflexO,
     UmlautO,
     TildeO,
-    SlashO,
-    CedillaC,
+    // SlashO,
+    // CedillaC,
     TildeN,
     // Eszett,
 }
 
-#[derive(Debug)]
-pub enum Case {
-    Lower,
-    Upper,
-}
-
 // thank you chatgpt
 impl Combinations {
-    pub fn get(&self) -> Combination {
+    pub fn get(&self) -> Shortcut {
         match self {
-            /* E */
-            Self::AcuteAccentE => Combination {
-                leader: vec![rdev::Key::Alt, rdev::Key::KeyE],
+            Self::AcuteAccentE => Shortcut {
+                leader: Leader::AltE,
                 key: Key::KeyE,
-                lowercase_char: "é",
-                uppercase_char: "É",
+                lowercase: "é",
+                uppercase: "É",
             },
-            Self::GraveAccentE => Combination {
-                leader: vec![Key::Alt, Key::BackQuote],
+            Self::GraveAccentE => Shortcut {
+                leader: Leader::AltBackquote,
                 key: Key::KeyE,
-                lowercase_char: "è",
-                uppercase_char: "È",
+                lowercase: "è",
+                uppercase: "È",
             },
-            Self::CircumflexE => Combination {
-                leader: vec![Key::Alt, Key::KeyI],
+            Self::CircumflexE => Shortcut {
+                leader: Leader::AltI,
                 key: Key::KeyE,
-                lowercase_char: "ê",
-                uppercase_char: "Ê",
+                lowercase: "ê",
+                uppercase: "Ê",
             },
-            Self::UmlautE => Combination {
-                leader: vec![Key::Alt, Key::KeyU],
+            Self::UmlautE => Shortcut {
+                leader: Leader::AltU,
                 key: Key::KeyE,
-                lowercase_char: "ë",
-                uppercase_char: "Ë",
+                lowercase: "ë",
+                uppercase: "Ë",
             },
 
-            /* u */
-            Self::AcuteAccentU => Combination {
-                leader: vec![Key::Alt, Key::KeyE],
+            /* U */
+            Self::AcuteAccentU => Shortcut {
+                leader: Leader::AltE,
                 key: Key::KeyU,
-                lowercase_char: "ú",
-                uppercase_char: "Ú",
+                lowercase: "ú",
+                uppercase: "Ú",
             },
-            Self::GraveAccentU => Combination {
-                leader: vec![Key::Alt, Key::BackQuote],
+            Self::GraveAccentU => Shortcut {
+                leader: Leader::AltBackquote,
                 key: Key::KeyU,
-                lowercase_char: "ù",
-                uppercase_char: "Ù",
+                lowercase: "ù",
+                uppercase: "Ù",
             },
-            Self::CircumflexU => Combination {
-                leader: vec![Key::Alt, Key::KeyI],
+            Self::CircumflexU => Shortcut {
+                leader: Leader::AltI,
                 key: Key::KeyU,
-                lowercase_char: "û",
-                uppercase_char: "Û",
+                lowercase: "û",
+                uppercase: "Û",
             },
-            Self::UmlautU => Combination {
-                leader: vec![Key::Alt, Key::KeyU],
+            Self::UmlautU => Shortcut {
+                leader: Leader::AltU,
                 key: Key::KeyU,
-                lowercase_char: "ü",
-                uppercase_char: "Ü",
+                lowercase: "ü",
+                uppercase: "Ü",
             },
-
-            /* misc */
-            Self::AcuteAccentA => Combination {
-                leader: vec![Key::Alt, Key::KeyE],
+            /* A */
+            Self::AcuteAccentA => Shortcut {
+                leader: Leader::AltE,
                 key: Key::KeyA,
-                lowercase_char: "á",
-                uppercase_char: "Á",
+                lowercase: "á",
+                uppercase: "Á",
             },
-            Self::GraveAccentA => Combination {
-                leader: vec![Key::Alt, Key::BackQuote],
+            Self::GraveAccentA => Shortcut {
+                leader: Leader::AltBackquote,
                 key: Key::KeyA,
-                lowercase_char: "à",
-                uppercase_char: "À",
+                lowercase: "à",
+                uppercase: "À",
             },
-            Self::CircumflexA => Combination {
-                leader: vec![Key::Alt, Key::KeyI],
+            Self::CircumflexA => Shortcut {
+                leader: Leader::AltI,
                 key: Key::KeyA,
-                lowercase_char: "â",
-                uppercase_char: "Â",
+                lowercase: "â",
+                uppercase: "Â",
             },
-            Self::UmlautA => Combination {
-                leader: vec![Key::Alt, Key::KeyU],
+            Self::UmlautA => Shortcut {
+                leader: Leader::AltU,
                 key: Key::KeyA,
-                lowercase_char: "ä",
-                uppercase_char: "Ä",
+                lowercase: "ä",
+                uppercase: "Ä",
             },
-            Self::TildeA => Combination {
-                leader: vec![Key::Alt, Key::KeyN],
+            Self::TildeA => Shortcut {
+                leader: Leader::AltN,
                 key: Key::KeyA,
-                lowercase_char: "ã",
-                uppercase_char: "Ã",
+                lowercase: "ã",
+                uppercase: "Ã",
             },
-            Self::RingA => Combination {
-                leader: vec![Key::Alt],
-                key: Key::KeyA,
-                lowercase_char: "å",
-                uppercase_char: "Å",
-            },
-            Self::AcuteAccentI => Combination {
-                leader: vec![Key::Alt, Key::KeyE],
-                key: Key::KeyI,
-                lowercase_char: "í",
-                uppercase_char: "Í",
-            },
-            Self::GraveAccentI => Combination {
-                leader: vec![Key::Alt, Key::BackQuote],
-                key: Key::KeyI,
-                lowercase_char: "ì",
-                uppercase_char: "Ì",
-            },
-            Self::CircumflexI => Combination {
-                leader: vec![Key::Alt, Key::KeyI],
-                key: Key::KeyI,
-                lowercase_char: "î",
-                uppercase_char: "Î",
-            },
-            Self::UmlautI => Combination {
-                leader: vec![Key::Alt, Key::KeyU],
-                key: Key::KeyI,
-                lowercase_char: "ï",
-                uppercase_char: "Ï",
-            },
-            Self::AcuteAccentO => Combination {
-                leader: vec![Key::Alt, Key::KeyE],
-                key: Key::KeyO,
-                lowercase_char: "ó",
-                uppercase_char: "Ó",
-            },
-            Self::GraveAccentO => Combination {
-                leader: vec![Key::Alt, Key::BackQuote],
-                key: Key::KeyO,
-                lowercase_char: "ò",
-                uppercase_char: "Ò",
-            },
-            Self::CircumflexO => Combination {
-                leader: vec![Key::Alt, Key::KeyI],
-                key: Key::KeyO,
-                lowercase_char: "ô",
-                uppercase_char: "Ô",
-            },
-            Self::UmlautO => Combination {
-                leader: vec![Key::Alt, Key::KeyU],
-                key: Key::KeyO,
-                lowercase_char: "ö",
-                uppercase_char: "Ö",
-            },
-            Self::TildeO => Combination {
-                leader: vec![Key::Alt, Key::KeyN],
-                key: Key::KeyO,
-                lowercase_char: "õ",
-                uppercase_char: "Õ",
-            },
-            Self::SlashO => Combination {
-                leader: vec![Key::Alt],
-                key: Key::KeyO,
-                lowercase_char: "ø",
-                uppercase_char: "Ø",
-            },
-            Self::CedillaC => Combination {
-                leader: vec![Key::Alt],
-                key: Key::KeyC,
-                lowercase_char: "ç",
-                uppercase_char: "Ç",
-            },
-            Self::TildeN => Combination {
-                leader: vec![Key::Alt, Key::KeyN],
-                key: Key::KeyN,
-                lowercase_char: "ñ",
-                uppercase_char: "Ñ",
-            },
-            // This one don't work yet.
-            // Add some functionality to allow for shorter shortcuts
-            // Self::Eszett => Combination {
-            //     leader: vec![Key::Alt],
-            //     key: Key::KeyS,
-            //     lowercase_char: "ß",
-            //     uppercase_char: "ß", // Note: ß does not have an uppercase variant in traditional use, though an uppercase variant (ẞ) exists.
+            // Self::RingA => Shortcut {
+            //     leader: Leader::new(vec![Key::Alt]),
+            //     key: Key::KeyA,
+            //     lowercase: "å",
+            //     uppercase: "Å",
             // },
+
+            /* I */
+            Self::AcuteAccentI => Shortcut {
+                leader: Leader::AltE,
+                key: Key::KeyI,
+                lowercase: "í",
+                uppercase: "Í",
+            },
+            Self::GraveAccentI => Shortcut {
+                leader: Leader::AltBackquote,
+                key: Key::KeyI,
+                lowercase: "ì",
+                uppercase: "Ì",
+            },
+            Self::CircumflexI => Shortcut {
+                leader: Leader::AltI,
+                key: Key::KeyI,
+                lowercase: "î",
+                uppercase: "Î",
+            },
+            Self::UmlautI => Shortcut {
+                leader: Leader::AltU,
+                key: Key::KeyI,
+                lowercase: "ï",
+                uppercase: "Ï",
+            },
+
+            /* O */
+            Self::AcuteAccentO => Shortcut {
+                leader: Leader::AltE,
+                key: Key::KeyO,
+                lowercase: "ó",
+                uppercase: "Ó",
+            },
+            Self::GraveAccentO => Shortcut {
+                leader: Leader::AltBackquote,
+                key: Key::KeyO,
+                lowercase: "ò",
+                uppercase: "Ò",
+            },
+            Self::CircumflexO => Shortcut {
+                leader: Leader::AltI,
+                key: Key::KeyO,
+                lowercase: "ô",
+                uppercase: "Ô",
+            },
+            Self::UmlautO => Shortcut {
+                leader: Leader::AltU,
+                key: Key::KeyO,
+                lowercase: "ö",
+                uppercase: "Ö",
+            },
+            Self::TildeO => Shortcut {
+                leader: Leader::AltN,
+                key: Key::KeyO,
+                lowercase: "õ",
+                uppercase: "Õ",
+            },
+            // Self::SlashO => Shortcut {
+            //     leader: Leader::new(vec![Key::Alt]),
+            //     key: Key::KeyO,
+            //     lowercase: "ø",
+            //     uppercase: "Ø",
+            // },
+
+            // /* Misc */
+            // Self::CedillaC => Shortcut {
+            //     leader: Leader::new(vec![Key::Alt]),
+            //     key: Key::KeyC,
+            //     lowercase: "ç",
+            //     uppercase: "Ç",
+            // },
+            Self::TildeN => Shortcut {
+                leader: Leader::AltN,
+                key: Key::KeyN,
+                lowercase: "ñ",
+                uppercase: "Ñ",
+            },
+            // Self::Eszett => Shortcut {
+            //     leader: Leader::new(vec![Key::Alt]),
+            //     key: Key::KeyS,
+            //     lowercase: "ß",
+            //     uppercase: "ß", // Note: ß traditionally does not have an uppercase variant, though an uppercase variant (ẞ) exists.
+            // },
+
+            // _ => Shortcut{key: Key::Alt}
         }
     }
-    pub fn all() -> Vec<Combination> {
-        let mut combinations = Vec::new();
-        for combination in Self::iter() {
-            combinations.push(combination.get());
-        }
-        combinations
+    pub fn all() -> Vec<Shortcut> {
+        Self::iter().map(|x| x.get()).collect::<Vec<Shortcut>>()
     }
 
-    // god help me
-    pub fn match_combination(pressed_keys: &PressedKeys) -> Option<(Combination, Case)> {
+    pub fn with_leader(leader: &Leader) -> Vec<Shortcut> {
         let combinations = Self::all();
-        for special_char in combinations {
-            if special_char.leader.len() > pressed_keys.keys.len() {
-                continue;
+        combinations
+            .iter()
+            .filter(|&x| &x.leader == leader)
+            .cloned()
+            .collect()
+    }
+
+    pub fn from_leader_and_key(leader: &Leader, keys: Vec<Key>) -> Option<(Shortcut, Case)> {
+        let all = Self::all();
+        let mut case: Case = Case::Lower;
+
+        let result = all.iter().find(|&x| {
+            let same_leader = &x.leader == leader;
+            let same_key = &x.key == keys.last().unwrap();
+
+            if [Key::ShiftLeft, x.key] == keys.as_slice() {
+                case = Case::Upper;
             }
 
-            let has_uppercase_combination =
-                pressed_keys.get_last(2) == vec![Key::ShiftLeft, special_char.key];
-            let has_lowercase_combination = pressed_keys.get_last(1) == vec![special_char.key];
+            return same_key && same_leader;
+        });
 
-            if has_lowercase_combination {
-                let full_length = special_char.leader.len() + 1;
-                let has_leader = pressed_keys.get_last(full_length)
-                    == [special_char.leader.as_slice(), &[special_char.key]]
-                        .concat()
-                        .as_slice();
-
-                if has_leader {
-                    return Some((special_char, Case::Lower));
-                }
-            }
-
-            if has_uppercase_combination {
-                let has_leader = pressed_keys.get_first(special_char.leader.len())
-                    == special_char.leader.as_slice();
-
-                if has_leader {
-                    return Some((special_char, Case::Upper));
-                }
-            }
+        if let Some(shortcut) = result {
+            return Some((shortcut.clone(), case));
         }
 
         None
-    }
-}
-
-impl PressedKeys {
-    pub fn new(size: usize) -> PressedKeys {
-        PressedKeys {
-            history_length: size,
-            keys: Vec::with_capacity(size),
-        }
-    }
-    pub fn push(&mut self, key: Key) {
-        if self.keys.len() >= self.history_length && !self.keys.is_empty() {
-            self.keys.remove(0);
-        }
-        self.keys.push(key);
-    }
-
-    pub fn get_last(&self, n: usize) -> &[rdev::Key] {
-        let start_index = if n >= self.keys.len() {
-            0
-        } else {
-            self.keys.len() - n
-        };
-
-        &self.keys[start_index..]
-    }
-
-    pub fn get_first(&self, n: usize) -> &[rdev::Key] {
-        let end_index = if n >= self.keys.len() {
-            self.keys.len()
-        } else {
-            n
-        };
-
-        &self.keys[..end_index]
     }
 }
