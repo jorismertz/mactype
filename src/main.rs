@@ -1,11 +1,11 @@
-use mactype::{Combinations, Leader};
-use std::{error::Error, fs, path::PathBuf, process, thread};
 use enigo::{Enigo, KeyboardControllable};
+use mactype::{Combinations, Leader};
 use rdev::{listen, Event, EventType, Key};
 use signal_hook::{
     consts::{SIGINT, SIGTERM},
     iterator::Signals,
 };
+use std::{error::Error, fs, path::PathBuf, process, thread};
 
 #[derive(Debug, Clone)]
 struct State {
@@ -24,28 +24,24 @@ impl State {
     }
 }
 
-fn get_pid_file_path() -> PathBuf {
-    // This feature is deprecated because of windows incompatibility,
-    // doesn't make sense to install a crate in this case.
-    let mut xdg_home_path =
-        std::env::home_dir().expect("Unable to lock PID file, can't find home directory path");
+fn lock_pid_file(filename: &str) -> std::io::Result<PathBuf> {
+    let path = format!(
+        "/var/run/user/{}/{}.pid",
+        users::get_current_uid(),
+        filename
+    );
 
-    xdg_home_path.push(".mactype.pid");
-    xdg_home_path
-}
-
-fn lock_pid_file(path: &PathBuf) -> std::io::Result<u32> {
     if let Ok(_) = fs::read(&path) {
         panic!("Unable to lock PID file, file already exists");
     }
-    let pid = process::id();
-    fs::write(path, pid.to_string())?;
-    Ok(pid)
+
+    fs::write(&path, process::id().to_string())?;
+    Ok(PathBuf::from(path))
 }
 
 fn unlock_pid_file(path: &PathBuf) -> std::io::Result<()> {
     fs::remove_file(path)?;
-    return Ok(());
+    Ok(())
 }
 
 fn spawn_pid_file_unlocker(path: PathBuf) -> Result<(), Box<dyn Error>> {
@@ -70,8 +66,7 @@ fn main() {
         block_for: 0,
     };
 
-    let pid_file_path = get_pid_file_path();
-    lock_pid_file(&pid_file_path).unwrap();
+    let pid_file_path = lock_pid_file("mactype").unwrap();
 
     // This will delete / 'unlock' the pid file upon receiving SIGTERM or SIGINT
     spawn_pid_file_unlocker(pid_file_path).unwrap();
